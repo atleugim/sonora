@@ -205,6 +205,10 @@ player-previous = Previous track
 player-next = Next track
 player-fullscreen = Fullscreen
 player-fullscreen-leave = Leave fullscreen
+player-sleep = Sleep timer
+player-sleep-off = Off
+player-sleep-end-of-track = End of track
+player-sleep-minutes = { $count } mins
 fullscreen-artwork = Artwork
 
 # filters

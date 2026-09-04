@@ -9,6 +9,9 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- A sleep timer pauses playback after 15, 30, 45 or 60 minutes, or at the end of the current
+  track. Set it from the moon button in the player bar.
+
 - Closing the window no longer stops the music: Sonora stays in the system tray with play/pause,
   previous, next, show and quit at hand, and the Dock icon steps aside on macOS until the window
   is back. Turn it off under Settings → General → Window if you would rather it quit.

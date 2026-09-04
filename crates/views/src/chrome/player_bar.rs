@@ -10,10 +10,10 @@ use gpui::{
 use gpui::{Window, div, px};
 use i18n::t;
 use input::{ToggleFullscreen, ToggleLyrics, ToggleQueue};
-use state::{AppSettings, Playback, Queue, SideTab, Sonora};
+use state::{AppSettings, Playback, Queue, SideTab, Sleep, Sonora};
 use ui::{
-    Artwork, Button, ExplicitBadge, InlineLink, InlineLinks, Popup, Room, Scrollbar, Scrubber,
-    ScrubberState, clock,
+    Artwork, Button, ExplicitBadge, InlineLink, InlineLinks, MenuItem, Picker, Popovers, Popup,
+    Room, Scrollbar, Scrubber, ScrubberState, clock,
 };
 
 use crate::chrome::SidebarRight;
@@ -25,6 +25,7 @@ const VOLUME_WIDTH: f32 = 110.;
 const VOLUME_TIGHT: f32 = 72.;
 const CLOCK_SHORT: f32 = 3.4;
 const CLOCK_LONG: f32 = 5.4;
+const SLEEP: &str = "sleep";
 
 pub(crate) struct PlayerBar {
     playback: Entity<Playback>,
@@ -32,6 +33,7 @@ pub(crate) struct PlayerBar {
     settings: Entity<AppSettings>,
     track_menu: ItemMenu,
     context_menu: Option<(music::Track, Point<Pixels>)>,
+    sleep_group: Popovers,
     seek: ScrubberState,
     volume: ScrubberState,
     pending: Option<f32>,
@@ -59,6 +61,7 @@ impl PlayerBar {
             settings,
             track_menu: ItemMenu::new(playlist_scrollbar),
             context_menu: None,
+            sleep_group: Popovers::default(),
             seek: ScrubberState::new("seek"),
             volume: ScrubberState::new("volume"),
             pending: None,
@@ -224,7 +227,55 @@ impl PlayerBar {
                 "queue-title",
                 SideTab::Queue,
             ))
+            .child(self.sleep_button(cx))
             .into_any_element()
+    }
+
+    fn sleep_button(&self, cx: &mut Context<Self>) -> AnyElement {
+        let theme = *cx.theme();
+        let armed = self.playback.read(cx).sleep().is_some();
+
+        Picker::icon(SLEEP, &self.sleep_group, "icons/moon.svg")
+            .tooltip_above("player-sleep")
+            .selected(armed)
+            .tint(match armed {
+                true => theme.foreground,
+                false => theme.muted_foreground,
+            })
+            .items(match self.sleep_group.shows(SLEEP) {
+                true => self.sleep_items(cx),
+                false => Vec::new(),
+            })
+            .into_any_element()
+    }
+
+    fn sleep_items(&self, cx: &Context<Self>) -> Vec<MenuItem> {
+        let current = self.playback.read(cx).sleep();
+        let playback = self.playback.clone();
+
+        let choice = move |id: SharedString, label: SharedString, pick: Option<Sleep>| {
+            let playback = playback.clone();
+            MenuItem::new(id, label)
+                .selected(current == pick)
+                .on_click(move |_, _, cx| {
+                    playback.update(cx, |playback, cx| playback.set_sleep(pick, cx))
+                })
+        };
+
+        let mut items = vec![choice("sleep-off".into(), t!("player-sleep-off"), None)];
+        for minutes in [15u64, 30, 45, 60] {
+            items.push(choice(
+                format!("sleep-{minutes}").into(),
+                t!("player-sleep-minutes", count = minutes),
+                Some(Sleep::After(Duration::from_secs(minutes * 60))),
+            ));
+        }
+        items.push(choice(
+            "sleep-end-of-track".into(),
+            t!("player-sleep-end-of-track"),
+            Some(Sleep::EndOfTrack),
+        ));
+        items
     }
 
     fn fullscreen_button(&self) -> Button {

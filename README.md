@@ -141,16 +141,16 @@ AI-assisted proofreading and translation of human-written text are permitted.
 
 | Language | Translated | Coverage |
 | --- | --- | --- |
-| English (`en-US`) | 501/501 | 100% |
-| Deutsch (`de`) | 475/501 | 95% |
-| Español (`es`) | 496/501 | 99% |
-| Français (`fr`) | 475/501 | 95% |
-| Italiano (`it`) | 475/501 | 95% |
-| 日本語 (`ja`) | 496/501 | 99% |
-| Русский (`ru`) | 480/501 | 96% |
-| Українська (`uk`) | 480/501 | 96% |
-| Polski (`pl`) | 480/501 | 96% |
-| Português (Brasil) (`pt-BR`) | 496/501 | 99% |
+| English (`en-US`) | 513/513 | 100% |
+| Deutsch (`de`) | 481/513 | 94% |
+| Español (`es`) | 496/513 | 97% |
+| Français (`fr`) | 475/513 | 93% |
+| Italiano (`it`) | 475/513 | 93% |
+| 日本語 (`ja`) | 496/513 | 97% |
+| Русский (`ru`) | 482/513 | 94% |
+| Українська (`uk`) | 482/513 | 94% |
+| Polski (`pl`) | 482/513 | 94% |
+| Português (Brasil) (`pt-BR`) | 496/513 | 97% |
 
 <!-- i18n:end -->
 
