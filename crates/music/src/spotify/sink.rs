@@ -1,3 +1,4 @@
+use std::num::NonZero;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, Ordering};
 use std::time::{Duration, Instant};
@@ -115,8 +116,8 @@ impl Sink for BlazingSink {
         let samples = converter.f64_to_f32(samples);
 
         self.output.sink().append(rodio::buffer::SamplesBuffer::new(
-            NUM_CHANNELS as cpal::ChannelCount,
-            SAMPLE_RATE,
+            const { NonZero::new(NUM_CHANNELS as cpal::ChannelCount).unwrap() },
+            const { NonZero::new(SAMPLE_RATE).unwrap() },
             &*samples,
         ));
 

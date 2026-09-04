@@ -287,7 +287,7 @@ async fn engine_loop(
     }
 }
 
-fn place(sink: &rodio::Sink, id: &str, at: Option<Duration>) {
+fn place(sink: &rodio::Player, id: &str, at: Option<Duration>) {
     let Some(at) = at else {
         return;
     };
@@ -296,7 +296,7 @@ fn place(sink: &rodio::Sink, id: &str, at: Option<Duration>) {
     }
 }
 
-fn load(sink: &rodio::Sink, id: &str) -> Result<Slot> {
+fn load(sink: &rodio::Player, id: &str) -> Result<Slot> {
     let path =
         wire::path_from_track_id(id).ok_or_else(|| anyhow!("{id} is not a local track id"))?;
     let file =

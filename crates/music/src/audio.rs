@@ -1,3 +1,4 @@
+use std::num::NonZero;
 use std::sync::Arc;
 use std::sync::atomic::{AtomicBool, AtomicU32, Ordering};
 use std::time::Duration;
@@ -5,11 +6,12 @@ use std::time::Duration;
 use anyhow::{Context as _, Result};
 use cpal::traits::{DeviceTrait, HostTrait};
 use rodio::source::SeekError;
-use rodio::{OutputStream, OutputStreamBuilder, Source};
+use rodio::{DeviceSinkBuilder, MixerDeviceSink, Source};
 
 use crate::spectrum::{Spectrum, Tap};
 
 pub const RAMP: Duration = Duration::from_millis(25);
+const BUFFER: Duration = Duration::from_millis(50);
 
 #[derive(Clone)]
 pub struct Volume(Arc<AtomicU32>);
@@ -29,11 +31,11 @@ impl Volume {
 }
 
 pub struct Output {
-    sink: Arc<rodio::Sink>,
+    sink: Arc<rodio::Player>,
     volume: Volume,
     device: String,
     failed: Arc<AtomicBool>,
-    _stream: OutputStream,
+    _stream: MixerDeviceSink,
 }
 
 impl Output {
@@ -47,25 +49,30 @@ impl Output {
             .default_output_config()
             .map_err(|error| anyhow::anyhow!("cannot read the output config: {error}"))?;
 
-        let device_name = device.name().unwrap_or_else(|_| "unknown".to_owned());
+        let device_name = ident(&device);
         log::info!(
             "sink: using {} at {} Hz, {} channels, {}",
             device_name,
-            default.sample_rate().0,
+            default.sample_rate(),
             default.channels(),
             default.sample_format()
         );
 
         let format = default.sample_format();
+        let frames = (BUFFER.as_secs_f64() * default.sample_rate() as f64).round() as u32;
         let failed = Arc::new(AtomicBool::new(false));
         let stream_failed = failed.clone();
-        let builder = OutputStreamBuilder::default()
+        let builder = DeviceSinkBuilder::default()
             .with_device(device)
             .with_config(&default.config())
+            .with_buffer_size(cpal::BufferSize::Fixed(frames))
             .with_sample_format(format)
-            .with_error_callback(move |error| {
-                log::warn!("sink: audio output failed: {error}");
-                stream_failed.store(true, Ordering::Release);
+            .with_error_callback(move |error| match error {
+                cpal::StreamError::BufferUnderrun => log::debug!("sink: buffer underrun"),
+                error => {
+                    log::warn!("sink: audio output failed: {error}");
+                    stream_failed.store(true, Ordering::Release);
+                }
             });
         let mut stream = builder
             .open_stream()
@@ -73,8 +80,8 @@ impl Output {
         stream.log_on_drop(false);
 
         let applied = volume.get();
-        let tap = spectrum.attach(default.sample_rate().0, default.channels());
-        let (sink, source) = rodio::Sink::new();
+        let tap = spectrum.attach(default.sample_rate(), default.channels());
+        let (sink, source) = rodio::Player::new();
         stream
             .mixer()
             .add(SmoothGain::new(source, volume.clone(), applied, RAMP).with_tap(tap));
@@ -88,7 +95,7 @@ impl Output {
         })
     }
 
-    pub fn sink(&self) -> &Arc<rodio::Sink> {
+    pub fn sink(&self) -> &Arc<rodio::Player> {
         &self.sink
     }
 
@@ -103,7 +110,7 @@ impl Output {
     pub fn changed(&self) -> bool {
         cpal::default_host()
             .default_output_device()
-            .and_then(|device| device.name().ok())
+            .map(|device| ident(&device))
             .is_none_or(|device| device != self.device)
     }
 }
@@ -150,8 +157,8 @@ impl<I: Source> SmoothGain<I> {
     }
 
     fn resync(&mut self) {
-        let channels = self.input.channels().max(1);
-        let rate = self.input.sample_rate().max(1);
+        let channels = self.input.channels().get();
+        let rate = self.input.sample_rate().get();
         if channels == self.channels && rate == self.rate {
             return;
         }
@@ -208,11 +215,11 @@ impl<I: Source> Source for SmoothGain<I> {
         self.input.current_span_len()
     }
 
-    fn channels(&self) -> u16 {
+    fn channels(&self) -> NonZero<u16> {
         self.input.channels()
     }
 
-    fn sample_rate(&self) -> u32 {
+    fn sample_rate(&self) -> NonZero<u32> {
         self.input.sample_rate()
     }
 
@@ -236,7 +243,7 @@ pub struct Trimmed<I> {
 
 impl<I: Source> Trimmed<I> {
     pub fn new(input: I, skip: Duration, take: Option<Duration>) -> Self {
-        let lane = (input.sample_rate() as u64) * (input.channels().max(1) as u64);
+        let lane = (input.sample_rate().get() as u64) * (input.channels().get() as u64);
         let samples = |span: Duration| (span.as_secs_f64() * lane as f64).round() as u64;
 
         Self {
@@ -279,11 +286,11 @@ impl<I: Source> Source for Trimmed<I> {
         self.input.current_span_len()
     }
 
-    fn channels(&self) -> u16 {
+    fn channels(&self) -> NonZero<u16> {
         self.input.channels()
     }
 
-    fn sample_rate(&self) -> u32 {
+    fn sample_rate(&self) -> NonZero<u32> {
         self.input.sample_rate()
     }
 
@@ -303,4 +310,11 @@ impl<I: Source> Source for Trimmed<I> {
         self.emitted = (position.as_secs_f64() * self.lane as f64).round() as u64;
         Ok(())
     }
+}
+
+fn ident(device: &cpal::Device) -> String {
+    device
+        .id()
+        .map(|id| id.to_string())
+        .unwrap_or_else(|_| "unknown".to_owned())
 }

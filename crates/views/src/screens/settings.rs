@@ -4,7 +4,9 @@ use std::path::{Path, PathBuf};
 use std::process::Command;
 
 use crate::shared::local;
-use crate::shared::popups::{AccountPicker, BrowserPicker, SearchPopup, matches_query};
+use crate::shared::popups::{
+    AccountPicker, BrowserPicker, CookiePrompt, SearchPopup, matches_query,
+};
 use gpui::{
     AnyElement, App, Context, Entity, FontWeight, Pixels, Render, SharedString, TextRun, Window,
     div, font, px,
@@ -17,7 +19,7 @@ use state::{AppSettings, Failure, Playback, SYSTEM_FONT, Session, SessionState, 
 use ui::{ActiveTheme as _, Scrollbar, Scroller, eyebrow};
 use ui::{
     Avatar, Button, InfoCard, Initials, Input, Look, MAX_FONT, MAX_LYRICS_SCALE, MAX_TRANSPARENCY,
-    MIN_FONT, MIN_LYRICS_SCALE, MenuItem, Modal, Pace, Picker, Popovers, Rounding, Saver, Scrubber,
+    MIN_FONT, MIN_LYRICS_SCALE, MenuItem, Pace, Picker, Popovers, Rounding, Saver, Scrubber,
     ScrubberState, Separator, Skeleton, Stillness, Switch, Text, Theme, ThemeKind,
 };
 
@@ -226,6 +228,9 @@ impl SettingsView {
                 Row::Item(self.karaoke_lyrics_row(cx).into_any_element()),
                 Row::Item(self.romanized_lyrics_row(cx).into_any_element()),
             ],
+            SettingsTab::Privacy => vec![Row::Item(
+                self.lyrics_for_local_files_row(cx).into_any_element(),
+            )],
             SettingsTab::About => vec![
                 Row::Item(self.version_row(cx).into_any_element()),
                 Row::Item(self.updates_row(cx).into_any_element()),
@@ -1148,6 +1153,27 @@ impl SettingsView {
         )
     }
 
+    fn lyrics_for_local_files_row(&self, cx: &mut Context<Self>) -> impl IntoElement {
+        let theme = *cx.theme();
+        let muted = theme.muted_foreground;
+        let small = theme.text(Text::Small);
+        let on = self.settings.read(cx).lyrics_for_local_files();
+
+        self.row(
+            t!("settings-lyrics-for-local-files"),
+            t!("settings-lyrics-for-local-files-detail"),
+            muted,
+            small,
+            Switch::new("lyrics-for-local-files", on)
+                .on_click(cx.listener(move |this, _, _, cx| {
+                    this.settings.update(cx, |settings, cx| {
+                        settings.set_lyrics_for_local_files(!on, cx)
+                    });
+                }))
+                .into_any_element(),
+        )
+    }
+
     fn karaoke_lyrics_row(&self, cx: &mut Context<Self>) -> impl IntoElement {
         let theme = *cx.theme();
         let muted = theme.muted_foreground;
@@ -1476,23 +1502,9 @@ impl SettingsView {
     }
 
     fn secret_prompt(&self, cx: &mut Context<Self>) -> impl IntoElement {
-        Modal::new("settings-cookie-prompt", t!("login-cookie-title"))
-            .w(px(560.))
-            .detail(t!("login-cookie-detail"))
-            .child(self.secret.clone())
-            .action(
-                Button::new("settings-cancel-cookies")
-                    .ghost()
-                    .label(t!("common-cancel"))
-                    .on_click(cx.listener(|this, _, _, cx| this.abandon(cx))),
-            )
-            .action(
-                Button::new("settings-submit-cookies")
-                    .label(t!("login-cookie-submit"))
-                    .primary()
-                    .on_click(cx.listener(|this, _, _, cx| this.submit(cx))),
-            )
-            .on_dismiss(cx.listener(|this, _, _, cx| this.abandon(cx)))
+        CookiePrompt::new(self.secret.clone())
+            .on_submit(cx.listener(|this, _, _, cx| this.submit(cx)))
+            .on_cancel(cx.listener(|this, _, _, cx| this.abandon(cx)))
     }
 
     fn method(

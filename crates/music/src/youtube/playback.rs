@@ -424,7 +424,7 @@ fn spawn(
     .abort_handle()
 }
 
-async fn silence(sink: &rodio::Sink, slot: Option<&Slot>) {
+async fn silence(sink: &rodio::Player, slot: Option<&Slot>) {
     let Some(slot) = slot else {
         sink.clear();
         return;
@@ -434,7 +434,7 @@ async fn silence(sink: &rodio::Sink, slot: Option<&Slot>) {
     sink.clear();
 }
 
-async fn await_drain(sink: &rodio::Sink) {
+async fn await_drain(sink: &rodio::Player) {
     if sink.is_paused() {
         return;
     }
@@ -442,7 +442,7 @@ async fn await_drain(sink: &rodio::Sink) {
 }
 
 fn begin(
-    sink: &rodio::Sink,
+    sink: &rodio::Player,
     id: &str,
     loaded: &Loaded,
     config: &PlaybackConfig,
@@ -464,7 +464,7 @@ fn begin(
 }
 
 fn append(
-    sink: &rodio::Sink,
+    sink: &rodio::Player,
     id: &str,
     loaded: &Loaded,
     config: &PlaybackConfig,
