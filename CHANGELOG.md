@@ -7,6 +7,11 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Fixed
+
+- Local music now carries a date added, taken from when each file was last changed, so the Date
+  added column fills in and sorting songs, albums and artists by it works.
+
 ## [0.31.0] - 2026-09-05
 
 ### Added
