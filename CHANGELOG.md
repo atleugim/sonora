@@ -15,6 +15,32 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Local music now carries a date added, taken from when each file was last changed, so the Date
+  added column fills in and sorting songs, albums and artists by it works.
+
+## [0.31.0] - 2026-09-05
+
+### Added
+
+- Nix users can manage Sonora through Home Manager. The flake exposes `homeManagerModules.default`
+  with a `programs.sonora` option whose `settings` are merged into `settings.json` on each launch.
+- Sonora speaks Indonesian. Pick Bahasa Indonesia under Settings > General > Language, or leave the
+  language on System and it follows an Indonesian desktop on its own.
+- On Linux and FreeBSD, Sonora can switch between server-side and client-side window decorations
+  from Appearance and shows its own window controls automatically with client-side decorations.
+
+### Changed
+
+- Window position, sidebar sizes, playback mode, table layouts, pins, listening history and local
+  playlists now live in one `state.sqlite` file in the data directory, and `settings.json` keeps
+  only preferences. Existing files are migrated on the first start.
+- YouTube Music sign-in now opens your default browser from the cookie instructions dialog.
+  Browser cookie extraction and automatic refresh from browser profiles have been removed.
+- Each provider keeps its sign-in in its own `credentials.json` under the cache folder, readable
+  only by you. Existing Spotify and YouTube Music sign-ins move over on the first launch.
+
+### Fixed
+
 - Playback no longer falls silent on PipeWire systems with a large graph quantum, such as a
   default Arch Linux install. The audio stream now keeps 50 ms of buffer regardless of the
   quantum, and a recovered underrun no longer restarts the player.
@@ -1300,7 +1326,8 @@ adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 Initial release: a native Spotify client with playback, an interactive queue, the saved library,
 search, album, playlist, artist and song pages, context menus and adaptive theming.
 
-[unreleased]: https://github.com/nolight132/sonora/compare/v0.30.0...HEAD
+[unreleased]: https://github.com/nolight132/sonora/compare/v0.31.0...HEAD
+[0.31.0]: https://github.com/nolight132/sonora/compare/v0.30.0...v0.31.0
 [0.30.0]: https://github.com/nolight132/sonora/compare/v0.29.0...v0.30.0
 [0.29.0]: https://github.com/nolight132/sonora/compare/v0.28.1...v0.29.0
 [0.28.1]: https://github.com/nolight132/sonora/compare/v0.28.0...v0.28.1
